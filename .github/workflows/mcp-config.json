@@ -1,0 +1,10 @@
+{
+	"mcpServers": {
+		"java-upgrade": {
+			"type": "local",
+			"command": "npx",
+			"tools": ["*"],
+			"args": ["-y", "@microsoft/github-copilot-app-modernization-mcp-server"]
+		}
+	}
+}

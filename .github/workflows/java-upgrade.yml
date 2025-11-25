@@ -1,0 +1,75 @@
+name: Copilot CLI
+
+on:
+  workflow_dispatch:
+    inputs:
+        input_copilot_cli_prompt:
+            description: 'Prompt for the copilot cli'
+            required: true
+            type: string
+            default: 'Upgrade this project to Java 21 with java upgrade tools'  # allows manual trigger from GitHub UI
+        input_result_branch:
+          description: 'Branch for the result'
+          required: true
+          type: string
+
+permissions:
+    id-token: write
+    contents: write # This is required for actions/checkout
+    actions: read
+
+jobs:
+  setup-java-upgrade-env:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+
+      - name: Install JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install Maven
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: '3.9.6'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup GitHub Copilot CLI
+        run: |
+          npm install -g @github/copilot
+          copilot --version
+
+      - name: Copy MCP config
+        run: |
+          mkdir -p ~/.copilot
+          cp .github/workflows/mcp-config.json ~/.copilot/mcp-config.json          
+
+      - name: Run Copilot CLI
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          COPILOT_CLI_PROMPT: ${{ inputs.input_copilot_cli_prompt }}
+        run: |
+           copilot -p "$COPILOT_CLI_PROMPT" --allow-all-tools
+
+      - name: Push changes to result branch
+        env:
+          TARGET_BRANCH: ${{ inputs.input_result_branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Push to remote
+          git push origin "$TARGET_BRANCH"
