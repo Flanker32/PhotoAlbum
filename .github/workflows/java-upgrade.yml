@@ -55,8 +55,13 @@ jobs:
 
       - name: Copy MCP config
         run: |
-          mkdir -p ~/.copilot
-          cp .github/workflows/mcp-config.json ~/.copilot/mcp-config.json          
+          if [ -n "$XDG_CONFIG_HOME" ]; then
+            CONFIG_DIR="$XDG_CONFIG_HOME/.copilot"
+          else
+            CONFIG_DIR="$HOME/.copilot"
+          fi
+          mkdir -p "$CONFIG_DIR"
+          cp .github/workflows/mcp-config.json "$CONFIG_DIR/mcp-config.json"
 
       - name: Run Copilot CLI
         env:
@@ -71,5 +76,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Commit all uncommitted changes if there are any
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            git add -A
+            git reset .github/workflows
+            git commit -m "chore: apply Copilot CLI changes [skip ci]" || echo "No changes to commit"
+          fi
           # Push to remote
+          git checkout -B "$TARGET_BRANCH"
           git push origin "$TARGET_BRANCH"
